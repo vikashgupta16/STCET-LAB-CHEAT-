@@ -17,8 +17,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-  cors: { origin: '*'},
-  path: '/socket.io/'
+  cors: { 
+    origin: '*',
+    methods: ['GET', 'POST']
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 });
 
 app.use(cors());

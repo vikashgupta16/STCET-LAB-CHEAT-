@@ -12,10 +12,6 @@
   ],
   "routes": [
     {
-      "src": "/socket.io/(.*)",
-      "dest": "/server/index.js"
-    },
-    {
       "src": "/api/(.*)",
       "dest": "/server/index.js"
     },
@@ -34,10 +30,16 @@
     {
       "src": "/",
       "dest": "/public/index.html"
-    },
+    }
+  ],
+  "headers": [
     {
-      "src": "/(.*)",
-      "dest": "/server/index.js"
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
     }
   ]
 }
