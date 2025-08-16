@@ -1,37 +1,53 @@
 (() => {
   // Check if we're on Vercel (no Socket.IO) or local development
-  const isVercel = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
-  const socket = !isVercel && window.io ? window.io() : null;
+  const isLocal = window.location.hostname === 'localhost' || 
+                 window.location.hostname === '127.0.0.1' || 
+                 window.location.hostname.includes('192.168') ||
+                 window.location.hostname.includes('localhost');
+  
+  // Only try to connect to Socket.IO if we're in local development
+  let socket = null;
+  
+  // Wait a moment for Socket.IO to load (if in local mode)
+  setTimeout(() => {
+    if (isLocal && window.io) {
+      socket = window.io();
+    }
+    
+    // Initialize the app after determining Socket.IO availability
+    initializeApp();
+  }, 100);
 
   // Show notice if Socket.IO is not available
-  if (isVercel || !socket) {
-    console.log('Running in API-only mode (no real-time features)');
+  if (!isLocal) {
+    console.log('Running in production mode - Socket.IO disabled for Vercel compatibility');
   }
 
-  const els = {
-    roomId: document.getElementById('roomId'),
-    joinBtn: document.getElementById('joinBtn'),
-    recentBtn: document.getElementById('recentBtn'),
-    recentRooms: document.getElementById('recentRooms'),
-    recentList: document.getElementById('recentList'),
-    codeInput: document.getElementById('codeInput'),
-    sendBtn: document.getElementById('sendBtn'),
-    shareBtn: document.getElementById('shareBtn'),
-    aiBtn: document.getElementById('aiBtn'),
-    aiOut: document.getElementById('aiOut'),
-    status: document.getElementById('status'),
-    messages: document.getElementById('messages'),
-    homeView: document.getElementById('homeView'),
-    chatView: document.getElementById('chatView'),
-    roomsGrid: document.getElementById('roomsGrid'),
-    refreshRooms: document.getElementById('refreshRooms'),
-    newRoomName: document.getElementById('newRoomName'),
-    createRoomBtn: document.getElementById('createRoomBtn'),
-    backBtn: document.getElementById('backBtn'),
-    currentRoomName: document.getElementById('currentRoomName'),
-    roomShareBtn: document.getElementById('roomShareBtn'),
-    deleteRoomBtn: document.getElementById('deleteRoomBtn'),
-  };
+  function initializeApp() {
+    const els = {
+      roomId: document.getElementById('roomId'),
+      joinBtn: document.getElementById('joinBtn'),
+      recentBtn: document.getElementById('recentBtn'),
+      recentRooms: document.getElementById('recentRooms'),
+      recentList: document.getElementById('recentList'),
+      codeInput: document.getElementById('codeInput'),
+      sendBtn: document.getElementById('sendBtn'),
+      shareBtn: document.getElementById('shareBtn'),
+      aiBtn: document.getElementById('aiBtn'),
+      aiOut: document.getElementById('aiOut'),
+      status: document.getElementById('status'),
+      messages: document.getElementById('messages'),
+      homeView: document.getElementById('homeView'),
+      chatView: document.getElementById('chatView'),
+      roomsGrid: document.getElementById('roomsGrid'),
+      refreshRooms: document.getElementById('refreshRooms'),
+      newRoomName: document.getElementById('newRoomName'),
+      createRoomBtn: document.getElementById('createRoomBtn'),
+      backBtn: document.getElementById('backBtn'),
+      currentRoomName: document.getElementById('currentRoomName'),
+      roomShareBtn: document.getElementById('roomShareBtn'),
+      deleteRoomBtn: document.getElementById('deleteRoomBtn'),
+    };
 
   let currentRoom = '';
   let userId = 'user_' + Math.random().toString(36).substring(2, 15);
@@ -425,7 +441,7 @@
     });
   } else {
     // API-only mode (no real-time features)
-    if (isVercel) {
+    if (!isLocal) {
       setStatus('Demo Mode - Limited Features');
       
       // Add notice about limited functionality
@@ -437,5 +453,8 @@
     } else {
       setStatus('Socket.IO not loaded');
     }
+  }
+
+  // Close the initializeApp function
   }
 })();
