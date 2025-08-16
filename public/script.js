@@ -1,27 +1,9 @@
 (() => {
-  // Check if we're on Vercel (no Socket.IO) or local development
-  const isLocal = window.location.hostname === 'localhost' || 
-                 window.location.hostname === '127.0.0.1' || 
-                 window.location.hostname.includes('192.168') ||
-                 window.location.hostname.includes('localhost');
+  // API-based mode (no Socket.IO needed)
+  const socket = null; // Removed Socket.IO completely
   
-  // Only try to connect to Socket.IO if we're in local development
-  let socket = null;
-  
-  // Wait a moment for Socket.IO to load (if in local mode)
-  setTimeout(() => {
-    if (isLocal && window.io) {
-      socket = window.io();
-    }
-    
-    // Initialize the app after determining Socket.IO availability
-    initializeApp();
-  }, 100);
-
-  // Show notice if Socket.IO is not available
-  if (!isLocal) {
-    console.log('Running in production mode - Socket.IO disabled for Vercel compatibility');
-  }
+  // Initialize the app immediately
+  initializeApp();
 
   function initializeApp() {
     const els = {
@@ -60,14 +42,25 @@
     if (!roomId) return;
     currentRoom = roomId.trim();
     
-    if (socket) {
-      socket.emit('join', { roomId: currentRoom, userId });
-      setStatus(`Connected • ${currentRoom}`);
-    } else {
-      // API-only mode
-      setStatus(`Demo Mode • ${currentRoom}`);
-      addSystemMessage(`📝 Joined room: ${currentRoom} (Demo mode - no real-time sync)`);
-    }
+    // API-based room joining
+    fetch('/api/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId: currentRoom })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        setStatus(`Connected • ${currentRoom}`);
+        loadRoomMessages();
+      } else {
+        setStatus('Failed to join room');
+      }
+    })
+    .catch(error => {
+      console.error('Join error:', error);
+      setStatus('Connection error');
+    });
     
     // Save to recent rooms
     saveRecentRoom(currentRoom);
@@ -89,9 +82,31 @@
     els.chatView.hidden = false;
     els.currentRoomName.textContent = roomName;
     
-    // Clear messages
+    // Clear messages and load room history
     els.messages.innerHTML = '';
     addSystemMessage(`Joined room: ${roomName}`);
+  }
+
+  function loadRoomMessages() {
+    if (!currentRoom) return;
+    
+    fetch(`/api/messages?roomId=${encodeURIComponent(currentRoom)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.messages && data.messages.length > 0) {
+          // Clear existing messages except system message
+          const systemMessages = els.messages.querySelectorAll('.system-message');
+          els.messages.innerHTML = '';
+          systemMessages.forEach(msg => els.messages.appendChild(msg));
+          
+          // Add room messages
+          data.messages.forEach(msg => addMessage(msg));
+        }
+      })
+      .catch(error => {
+        console.error('Error loading messages:', error);
+        addSystemMessage('❌ Error loading room messages');
+      });
   }
 
   async function loadPublicRooms() {
@@ -239,24 +254,38 @@
       return;
     }
     
-    const message = {
-      roomId: currentRoom,
-      userId,
-      code,
-      timestamp: Date.now()
-    };
-    
-    if (socket) {
-      socket.emit('send_message', message);
-    } else {
-      // API-only mode - show message locally
-      addMessage({
+    // Send message via API
+    fetch(`/api/messages?roomId=${encodeURIComponent(currentRoom)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         userId,
-        content: code,
+        code,
         timestamp: new Date().toISOString()
-      });
-      addSystemMessage('⚠️ Message sent in demo mode (not saved - no real-time sync)');
-    }
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Add message to UI immediately
+        addMessage({
+          userId,
+          content: code,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Refresh room list to update message count
+        if (els.homeView.hidden === false) {
+          loadPublicRooms();
+        }
+      } else {
+        addSystemMessage('❌ Failed to send message');
+      }
+    })
+    .catch(error => {
+      console.error('Send error:', error);
+      addSystemMessage('❌ Error sending message');
+    });
     
     els.codeInput.value = '';
     adjustTextareaHeight();
@@ -265,18 +294,6 @@
   function adjustTextareaHeight() {
     els.codeInput.style.height = 'auto';
     els.codeInput.style.height = Math.min(els.codeInput.scrollHeight, 120) + 'px';
-  }
-
-  // Restore last room
-  const urlParams = new URLSearchParams(location.search);
-  const roomFromQuery = urlParams.get('room');
-  const lastRoom = localStorage.getItem('lastRoom');
-  
-  if (roomFromQuery) {
-    els.roomId.value = roomFromQuery;
-    if (socket) join(roomFromQuery);
-  } else if (lastRoom) {
-    els.roomId.value = lastRoom;
   }
 
   // Initialize recent rooms
@@ -338,14 +355,16 @@
     if (!confirmDelete) return;
     
     try {
-      const response = await fetch(`/api/rooms/${currentRoom}`, {
-        method: 'DELETE'
+      const response = await fetch('/api/rooms', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: currentRoom })
       });
       
       if (response.ok) {
         showHomeView();
-        addSystemMessage = () => {}; // Prevent message
         alert(`Room "${currentRoom}" has been deleted successfully.`);
+        loadPublicRooms(); // Refresh room list
       } else {
         const error = await response.json();
         alert(`Failed to delete room: ${error.error || 'Unknown error'}`);
@@ -416,43 +435,31 @@
     }
   });
 
-  // Socket events
-  if (socket) {
-    socket.on('connect', () => setStatus('Connected'));
-    socket.on('disconnect', () => setStatus('Disconnected'));
-    
-    socket.on('message_received', (data) => {
-      addMessage(data);
-    });
-    
-    socket.on('room_history', (messages) => {
-      els.messages.innerHTML = '';
-      messages.forEach(msg => addMessage(msg));
-      if (messages.length === 0) {
-        addSystemMessage('Room is empty. Start sharing code!');
-      }
-    });
+  // Initialize app status
+  setStatus('API Mode - Ready');
 
-    socket.on('room_deleted', (data) => {
-      if (data.roomId === currentRoom) {
-        alert(`Room "${currentRoom}" has been deleted by another user.`);
-        showHomeView();
-      }
-    });
+  // Initialize startup
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomFromQuery = urlParams.get('room');
+  const lastRoom = localStorage.getItem('lastRoom');
+  
+  if (roomFromQuery) {
+    els.roomId.value = roomFromQuery;
+    join(roomFromQuery);
+  } else if (lastRoom) {
+    els.roomId.value = lastRoom;
+  }
+
+  // Initialize recent rooms
+  updateRecentList();
+  
+  // Check URL for direct room join
+  if (roomFromQuery) {
+    els.roomId.value = roomFromQuery;
+    join(roomFromQuery);
   } else {
-    // API-only mode (no real-time features)
-    if (!isLocal) {
-      setStatus('Demo Mode - Limited Features');
-      
-      // Add notice about limited functionality
-      setTimeout(() => {
-        addSystemMessage('⚠️ Running in Vercel demo mode - real-time features disabled');
-        addSystemMessage('💡 For full Socket.IO features, deploy to Railway or Render');
-        addSystemMessage('📝 You can still browse rooms and test the API');
-      }, 1000);
-    } else {
-      setStatus('Socket.IO not loaded');
-    }
+    // Show home view by default
+    showHomeView();
   }
 
   // Close the initializeApp function
