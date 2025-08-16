@@ -2,7 +2,7 @@
   // Configuration for production deployment
   const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3000'  // Local development
-    : 'https://your-render-app.onrender.com';  // Production backend on Render
+    : 'https://stcet-lab-cheat-backend.onrender.com';  // Replace with your actual Render URL
   
   const socket = io(BACKEND_URL);
 
