@@ -35,9 +35,13 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
-// Static client - Adjust path for Vercel serverless deployment
-const publicDir = path.resolve(__dirname, '../../public');
-app.use('/', express.static(publicDir));
+// For Vercel serverless deployment, we don't serve static files from Express
+// Static files are handled by Vercel's static build configuration
+if (process.env.NODE_ENV !== 'production') {
+  // Only serve static files locally during development
+  const publicDir = path.resolve(__dirname, '../public');
+  app.use('/', express.static(publicDir));
+}
 
 // Env
 const PORT = process.env.PORT || 3000;
@@ -277,11 +281,24 @@ app.get('/debug', (req, res) => {
 // Health check endpoint
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-initMongo()
-  .then(() => {
-    server.listen(PORT, () => console.log(`Server running on :${PORT}`));
-  })
-  .catch((err) => {
+// Initialize and start server
+async function startServer() {
+  try {
+    await initMongo();
+    console.log('MongoDB connected successfully');
+  } catch (err) {
     console.error('Mongo init failed, continuing without persistence:', err.message);
-    server.listen(PORT, () => console.log(`Server running on :${PORT} (no DB)`));
-  });
+  }
+
+  // For Vercel, we export the app; for local development, start the server
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+    console.log('Running in serverless mode');
+  } else {
+    server.listen(PORT, () => console.log(`Server running on :${PORT}`));
+  }
+}
+
+startServer();
+
+// Export for Vercel serverless functions
+export default app;
