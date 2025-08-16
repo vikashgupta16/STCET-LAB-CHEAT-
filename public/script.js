@@ -10,6 +10,10 @@
   initializeApp();
 
   function initializeApp() {
+    // Get URL parameters for direct room join
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomFromQuery = urlParams.get('room');
+    
     const els = {
       roomId: document.getElementById('roomId'),
       joinBtn: document.getElementById('joinBtn'),
@@ -402,9 +406,7 @@
   // Initialize app status
   setStatus('Connecting...');
 
-  // Initialize startup
-  const urlParams = new URLSearchParams(window.location.search);
-  const roomFromQuery = urlParams.get('room');
+  // Initialize startup - use the already declared variables
   const lastRoom = localStorage.getItem('lastRoom');
   
   if (roomFromQuery) {
@@ -417,12 +419,8 @@
   // Initialize recent rooms
   updateRecentList();
   
-  // Check URL for direct room join
-  if (roomFromQuery) {
-    els.roomId.value = roomFromQuery;
-    join(roomFromQuery);
-  } else {
-    // Show home view by default
+  // Show home view if no room specified
+  if (!roomFromQuery) {
     showHomeView();
   }
 
