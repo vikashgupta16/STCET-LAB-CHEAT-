@@ -1,5 +1,12 @@
 (() => {
-  const socket = window.io ? window.io() : undefined;
+  // Check if we're on Vercel (no Socket.IO) or local development
+  const isVercel = !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1');
+  const socket = !isVercel && window.io ? window.io() : null;
+
+  // Show notice if Socket.IO is not available
+  if (isVercel || !socket) {
+    console.log('Running in API-only mode (no real-time features)');
+  }
 
   const els = {
     roomId: document.getElementById('roomId'),
@@ -34,10 +41,17 @@
   }
 
   function join(roomId) {
-    if (!roomId || !socket) return;
+    if (!roomId) return;
     currentRoom = roomId.trim();
-    socket.emit('join', { roomId: currentRoom, userId });
-    setStatus(`Connected • ${currentRoom}`);
+    
+    if (socket) {
+      socket.emit('join', { roomId: currentRoom, userId });
+      setStatus(`Connected • ${currentRoom}`);
+    } else {
+      // API-only mode
+      setStatus(`Demo Mode • ${currentRoom}`);
+      addSystemMessage(`📝 Joined room: ${currentRoom} (Demo mode - no real-time sync)`);
+    }
     
     // Save to recent rooms
     saveRecentRoom(currentRoom);
@@ -201,7 +215,7 @@
 
   function sendCode() {
     const code = sanitizeInput(els.codeInput.value);
-    if (!code || !currentRoom || !socket) return;
+    if (!code || !currentRoom) return;
     
     // Prevent spam
     if (code.length < 3) {
@@ -216,7 +230,18 @@
       timestamp: Date.now()
     };
     
-    socket.emit('send_message', message);
+    if (socket) {
+      socket.emit('send_message', message);
+    } else {
+      // API-only mode - show message locally
+      addMessage({
+        userId,
+        content: code,
+        timestamp: new Date().toISOString()
+      });
+      addSystemMessage('⚠️ Message sent in demo mode (not saved - no real-time sync)');
+    }
+    
     els.codeInput.value = '';
     adjustTextareaHeight();
   }
@@ -399,6 +424,18 @@
       }
     });
   } else {
-    setStatus('Socket.IO not loaded');
+    // API-only mode (no real-time features)
+    if (isVercel) {
+      setStatus('Demo Mode - Limited Features');
+      
+      // Add notice about limited functionality
+      setTimeout(() => {
+        addSystemMessage('⚠️ Running in Vercel demo mode - real-time features disabled');
+        addSystemMessage('💡 For full Socket.IO features, deploy to Railway or Render');
+        addSystemMessage('📝 You can still browse rooms and test the API');
+      }, 1000);
+    } else {
+      setStatus('Socket.IO not loaded');
+    }
   }
 })();
