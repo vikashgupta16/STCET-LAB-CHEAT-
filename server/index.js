@@ -17,15 +17,26 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-  cors: { 
-    origin: '*',
-    methods: ['GET', 'POST']
-  },
-  transports: ['websocket', 'polling'],
-  allowEIO3: true
+  cors: {
+    origin: [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000", 
+      "https://your-vercel-app.vercel.app",  // Replace with your actual Vercel URL
+      /^https:\/\/.*\.vercel\.app$/  // Allow any Vercel subdomain
+    ],
+    methods: ["GET", "POST"]
+  }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://your-vercel-app.vercel.app",  // Replace with your actual Vercel URL
+    /^https:\/\/.*\.vercel\.app$/  // Allow any Vercel subdomain
+  ],
+  credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
 
 // Rate limiting for production
@@ -300,7 +311,7 @@ app.get('/test', (req, res) => {
   });
 });
 
-// Initialize and start server
+// Initialize and start server for Render
 async function startServer() {
   try {
     await initMongo();
@@ -309,21 +320,12 @@ async function startServer() {
     console.error('Mongo init failed, continuing without persistence:', err.message);
   }
 
-  // Only start server in non-Vercel environments
-  if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
-    server.listen(PORT, () => console.log(`Server running on :${PORT}`));
-  }
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 }
 
-// Initialize for non-serverless environments
-if (!process.env.VERCEL) {
-  startServer();
-} else {
-  // For Vercel, initialize MongoDB async but don't block
-  initMongo().catch(err => 
-    console.error('Mongo init failed in serverless mode:', err.message)
-  );
-}
-
-// Export for Vercel serverless functions
-export default app;
+// Start the server
+startServer();

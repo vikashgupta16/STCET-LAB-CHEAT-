@@ -1,8 +1,12 @@
 (() => {
-  // API-based mode (no Socket.IO needed)
-  const socket = null; // Removed Socket.IO completely
+  // Configuration for production deployment
+  const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:3000'  // Local development
+    : 'https://your-render-app.onrender.com';  // Production backend on Render
   
-  // Initialize the app immediately
+  const socket = io(BACKEND_URL);
+
+  // Initialize the app
   initializeApp();
 
   function initializeApp() {
@@ -39,28 +43,10 @@
   }
 
   function join(roomId) {
-    if (!roomId) return;
+    if (!roomId || !socket) return;
     currentRoom = roomId.trim();
-    
-    // API-based room joining
-    fetch('/api/rooms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomId: currentRoom })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        setStatus(`Connected • ${currentRoom}`);
-        loadRoomMessages();
-      } else {
-        setStatus('Failed to join room');
-      }
-    })
-    .catch(error => {
-      console.error('Join error:', error);
-      setStatus('Connection error');
-    });
+    socket.emit('join', { roomId: currentRoom, userId });
+    setStatus(`Connected • ${currentRoom}`);
     
     // Save to recent rooms
     saveRecentRoom(currentRoom);
@@ -82,38 +68,16 @@
     els.chatView.hidden = false;
     els.currentRoomName.textContent = roomName;
     
-    // Clear messages and load room history
+    // Clear messages
     els.messages.innerHTML = '';
     addSystemMessage(`Joined room: ${roomName}`);
-  }
-
-  function loadRoomMessages() {
-    if (!currentRoom) return;
-    
-    fetch(`/api/messages?roomId=${encodeURIComponent(currentRoom)}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.messages && data.messages.length > 0) {
-          // Clear existing messages except system message
-          const systemMessages = els.messages.querySelectorAll('.system-message');
-          els.messages.innerHTML = '';
-          systemMessages.forEach(msg => els.messages.appendChild(msg));
-          
-          // Add room messages
-          data.messages.forEach(msg => addMessage(msg));
-        }
-      })
-      .catch(error => {
-        console.error('Error loading messages:', error);
-        addSystemMessage('❌ Error loading room messages');
-      });
   }
 
   async function loadPublicRooms() {
     try {
       els.roomsGrid.innerHTML = '<div class="loading">Loading rooms...</div>';
       
-      const response = await fetch('/api/rooms');
+      const response = await fetch(`${BACKEND_URL}/api/rooms`);
       const rooms = await response.json();
       
       if (rooms.length === 0) {
@@ -246,7 +210,7 @@
 
   function sendCode() {
     const code = sanitizeInput(els.codeInput.value);
-    if (!code || !currentRoom) return;
+    if (!code || !currentRoom || !socket) return;
     
     // Prevent spam
     if (code.length < 3) {
@@ -254,39 +218,14 @@
       return;
     }
     
-    // Send message via API
-    fetch(`/api/messages?roomId=${encodeURIComponent(currentRoom)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        code,
-        timestamp: new Date().toISOString()
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Add message to UI immediately
-        addMessage({
-          userId,
-          content: code,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Refresh room list to update message count
-        if (els.homeView.hidden === false) {
-          loadPublicRooms();
-        }
-      } else {
-        addSystemMessage('❌ Failed to send message');
-      }
-    })
-    .catch(error => {
-      console.error('Send error:', error);
-      addSystemMessage('❌ Error sending message');
-    });
+    const message = {
+      roomId: currentRoom,
+      userId,
+      code,
+      timestamp: Date.now()
+    };
     
+    socket.emit('send_message', message);
     els.codeInput.value = '';
     adjustTextareaHeight();
   }
@@ -355,10 +294,8 @@
     if (!confirmDelete) return;
     
     try {
-      const response = await fetch('/api/rooms', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: currentRoom })
+      const response = await fetch(`${BACKEND_URL}/api/rooms/${currentRoom}`, {
+        method: 'DELETE'
       });
       
       if (response.ok) {
@@ -418,7 +355,7 @@
     els.aiOut.textContent = 'AI is thinking...';
     
     try {
-      const resp = await fetch('/api/ask-ai', {
+      const resp = await fetch(`${BACKEND_URL}/api/ask-ai`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: `Briefly explain this code:\n\n${code}` })
@@ -435,8 +372,35 @@
     }
   });
 
+  // Socket events - Full real-time functionality
+  socket.on('connect', () => setStatus('Connected'));
+  socket.on('disconnect', () => setStatus('Disconnected'));
+  
+  socket.on('message_received', (data) => {
+    addMessage(data);
+  });
+  
+  socket.on('room_history', (messages) => {
+    els.messages.innerHTML = '';
+    messages.forEach(msg => addMessage(msg));
+    if (messages.length === 0) {
+      addSystemMessage('Room is empty. Start sharing code!');
+    }
+  });
+  
+  socket.on('user_joined', (data) => {
+    addSystemMessage(`${data.userId} joined the room`);
+  });
+
+  socket.on('room_deleted', (data) => {
+    if (data.roomId === currentRoom) {
+      alert(`Room "${currentRoom}" has been deleted by another user.`);
+      showHomeView();
+    }
+  });
+
   // Initialize app status
-  setStatus('API Mode - Ready');
+  setStatus('Connecting...');
 
   // Initialize startup
   const urlParams = new URLSearchParams(window.location.search);
