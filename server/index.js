@@ -272,7 +272,7 @@ app.get('/debug', (req, res) => {
     vercel: process.env.VERCEL,
     baseUrl: req.protocol + '://' + req.get('host'),
     dirname: __dirname,
-    publicDir,
+    timestamp: new Date().toISOString(),
     routes: app._router.stack
       .filter(r => r.route)
       .map(r => ({
@@ -294,15 +294,21 @@ async function startServer() {
     console.error('Mongo init failed, continuing without persistence:', err.message);
   }
 
-  // For Vercel, we export the app; for local development, start the server
-  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-    console.log('Running in serverless mode');
-  } else {
+  // Only start server in non-Vercel environments
+  if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
     server.listen(PORT, () => console.log(`Server running on :${PORT}`));
   }
 }
 
-startServer();
+// Initialize for non-serverless environments
+if (!process.env.VERCEL) {
+  startServer();
+} else {
+  // For Vercel, initialize MongoDB async but don't block
+  initMongo().catch(err => 
+    console.error('Mongo init failed in serverless mode:', err.message)
+  );
+}
 
 // Export for Vercel serverless functions
 export default app;
