@@ -50,6 +50,15 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
+// Health check endpoint for Render
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'Server is running', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // For Vercel serverless deployment, we don't serve static files from Express
 // Static files are handled by Vercel's static build configuration
 if (process.env.NODE_ENV !== 'production') {

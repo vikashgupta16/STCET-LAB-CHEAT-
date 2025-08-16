@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: stcet-lab-cheat-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
