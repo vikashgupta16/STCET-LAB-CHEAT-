@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STCET Code Share - Vercel Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .status {
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+    .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+    .btn {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      margin: 5px;
+    }
+    .btn:hover { background: #0056b3; }
+    code { background: #f8f9fa; padding: 2px 5px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 STCET Code Share - Vercel Demo</h1>
+    
+    <div class="status success">
+      <strong>✅ Basic API Working!</strong> Vercel deployment successful.
+    </div>
+
+    <div class="status warning">
+      <strong>⚠️ Limited Functionality:</strong> Socket.IO real-time features are disabled on Vercel due to serverless limitations.
+    </div>
+
+    <h2>Available Endpoints:</h2>
+    <ul>
+      <li><code>/api/health</code> - Health check</li>
+      <li><code>/api/rooms</code> - Room management</li>
+      <li><code>/api/index</code> - API test</li>
+    </ul>
+
+    <h2>Test the API:</h2>
+    <a href="/api/health" class="btn">Test Health Endpoint</a>
+    <a href="/api/rooms" class="btn">Test Rooms Endpoint</a>
+    <a href="/api/index" class="btn">Test API Index</a>
+
+    <h2>For Full Real-time Features:</h2>
+    <div class="status error">
+      <p><strong>Socket.IO requires persistent connections</strong> which don't work on Vercel's serverless functions.</p>
+      <p>For full functionality, deploy to:</p>
+      <ul>
+        <li><strong>Railway</strong> (recommended)</li>
+        <li><strong>Render</strong></li>
+        <li><strong>Heroku</strong></li>
+        <li>Any VPS with Node.js</li>
+      </ul>
+    </div>
+
+    <h2>GitHub Repository:</h2>
+    <p>Full source code: <a href="https://github.com/vikashgupta16/STCET-LAB-CHEAT-" target="_blank">https://github.com/vikashgupta16/STCET-LAB-CHEAT-</a></p>
+  </div>
+
+  <script>
+    // Test API functionality
+    async function testAPI() {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        console.log('API Test:', data);
+      } catch (error) {
+        console.error('API Test failed:', error);
+      }
+    }
+    testAPI();
+  </script>
+</body>
+</html>
