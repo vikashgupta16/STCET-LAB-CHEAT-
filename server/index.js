@@ -257,6 +257,24 @@ io.on('connection', (socket) => {
 });
 
 // Health
+// Add a debug route to diagnose Vercel issues
+app.get('/debug', (req, res) => {
+  res.json({
+    env: process.env.NODE_ENV,
+    vercel: process.env.VERCEL,
+    baseUrl: req.protocol + '://' + req.get('host'),
+    dirname: __dirname,
+    publicDir,
+    routes: app._router.stack
+      .filter(r => r.route)
+      .map(r => ({
+        path: r.route.path,
+        methods: Object.keys(r.route.methods)
+      }))
+  });
+});
+
+// Health check endpoint
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 initMongo()
