@@ -17,7 +17,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-  cors: { origin: '*'}
+  cors: { origin: '*'},
+  path: '/socket.io/'
 });
 
 app.use(cors());
@@ -34,8 +35,8 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
-// Static client
-const publicDir = path.resolve(__dirname, '../public');
+// Static client - Adjust path for Vercel serverless deployment
+const publicDir = path.resolve(__dirname, '../../public');
 app.use('/', express.static(publicDir));
 
 // Env
