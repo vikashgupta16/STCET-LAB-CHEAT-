@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>STCET Code Share - Real-time Code Sharing Platform</title>
+  <meta name="description" content="Share code instantly across devices with WhatsApp-like interface. Perfect for STCET lab sessions and collaborative coding." />
+  <meta name="keywords" content="code sharing, STCET, programming, real-time, collaboration" />
+  <meta name="author" content="STCET" />
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="STCET Code Share" />
+  <meta property="og:description" content="Real-time code sharing platform for students" />
+  <meta property="og:url" content="https://your-domain.com" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  
+  <!-- PWA -->
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="chat-header">
+      <div class="room-info">
+        <input id="roomId" placeholder="Enter room name..." />
+        <button id="joinBtn">Join</button>
+        <button id="recentBtn" class="recent-btn">📋</button>
+      </div>
+      <div class="status" id="status">Disconnected</div>
+      
+      <!-- Recent Rooms Dropdown -->
+      <div class="recent-rooms" id="recentRooms" hidden>
+        <h4>Recent Rooms</h4>
+        <div class="recent-list" id="recentList">
+          <p>No recent rooms</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Messages Area -->
+    <main class="chat-container">
+      <!-- Home/Discovery View -->
+      <div class="home-view" id="homeView">
+        <div class="hero">
+          <h2>🚀 STCET Code Share</h2>
+          <p>Discover active rooms or create your own</p>
+        </div>
+        
+        <div class="room-discovery">
+          <div class="section-header">
+            <h3>🔥 Active Rooms</h3>
+            <button id="refreshRooms" class="refresh-btn">↻</button>
+          </div>
+          <div class="rooms-grid" id="roomsGrid">
+            <div class="loading">Loading rooms...</div>
+          </div>
+          
+          <div class="create-room">
+            <h3>✨ Create New Room</h3>
+            <div class="create-input">
+              <input id="newRoomName" placeholder="Enter room name..." />
+              <button id="createRoomBtn">Create & Join</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Chat View -->
+      <div class="chat-view" id="chatView" hidden>
+        <div class="chat-header-bar">
+          <button id="backBtn" class="back-btn">← Back</button>
+          <div class="room-name" id="currentRoomName"></div>
+          <div class="room-actions">
+            <button id="roomShareBtn" class="share-room-btn">📤</button>
+            <button id="deleteRoomBtn" class="delete-room-btn">🗑️</button>
+          </div>
+        </div>
+        
+        <div class="messages" id="messages">
+          <div class="welcome-msg">
+            <p>🚀 Welcome to STCET Code Share</p>
+            <p>Start sharing code in real-time</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Input Area -->
+    <footer class="input-area">
+      <div class="input-container">
+        <textarea id="codeInput" placeholder="Type your code here..." rows="3"></textarea>
+        <div class="input-actions">
+          <button id="sendBtn" class="send-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+            </svg>
+          </button>
+          <button id="shareBtn" class="action-btn">📤</button>
+          <button id="aiBtn" class="action-btn">🤖</button>
+        </div>
+      </div>
+      <div class="ai-response" id="aiOut" hidden></div>
+    </footer>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/script.js"></script>
+</body>
+</html>

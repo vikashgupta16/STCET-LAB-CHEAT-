@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - server/.env
+    restart: unless-stopped
+    
+  # Optional MongoDB (uncomment if needed)
+  # mongo:
+  #   image: mongo:6
+  #   restart: unless-stopped
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: admin
+  #     MONGO_INITDB_ROOT_PASSWORD: password
+  #   volumes:
+  #     - mongo_data:/data/db
+  #   ports:
+  #     - "27017:27017"
+
+# volumes:
+#   mongo_data:
