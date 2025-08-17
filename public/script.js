@@ -26,6 +26,8 @@
       aiBtn: document.getElementById('aiBtn'),
       aiOut: document.getElementById('aiOut'),
       status: document.getElementById('status'),
+      connectionStatus: document.getElementById('connectionStatus'),
+      statusText: document.getElementById('statusText'),
       messages: document.getElementById('messages'),
       homeView: document.getElementById('homeView'),
       chatView: document.getElementById('chatView'),
@@ -41,16 +43,69 @@
 
   let currentRoom = '';
   let userId = 'user_' + Math.random().toString(36).substring(2, 15);
+  let isConnected = false;
+  let isInRoom = false;
 
-  function setStatus(text) {
+  function updateConnectionStatus(connected, inRoom = false) {
+    isConnected = connected;
+    isInRoom = inRoom;
+    
+    // Update visual status indicator
+    els.connectionStatus.className = 'status-indicator';
+    if (connected && inRoom) {
+      els.connectionStatus.classList.add('in-room');
+      els.statusText.textContent = `Connected to ${currentRoom}`;
+    } else if (connected) {
+      els.connectionStatus.classList.add('connected');
+      els.statusText.textContent = 'Connected - Join a room to start sharing';
+    } else {
+      els.statusText.textContent = 'Disconnected - Join a room to start sharing';
+    }
+    
+    // Update button states
+    updateButtonStates();
+  }
+
+  function updateButtonStates() {
+    const canSend = isConnected && isInRoom && els.codeInput.value.trim().length > 0;
+    const canUseFeatures = isConnected && isInRoom;
+    
+    // Send button
+    els.sendBtn.disabled = !canSend;
+    els.sendBtn.title = canSend 
+      ? 'Send code to room' 
+      : !isInRoom 
+        ? 'Join a room to send messages'
+        : 'Type some code to send';
+    
+    // Share button
+    els.shareBtn.disabled = !canUseFeatures;
+    els.shareBtn.setAttribute('data-tooltip', 
+      canUseFeatures ? 'Share room link' : 'Join a room to share');
+    
+    // AI button
+    els.aiBtn.disabled = !canUseFeatures;
+    els.aiBtn.setAttribute('data-tooltip', 
+      canUseFeatures ? 'Get AI help with code' : 'AI available in rooms');
+    
+    // Add pulse effect when ready to send
+    if (canSend) {
+      els.sendBtn.classList.add('pulse');
+    } else {
+      els.sendBtn.classList.remove('pulse');
+    }
+  }
+
+  function setStatus(text, connected = false, inRoom = false) {
     els.status.textContent = text;
+    updateConnectionStatus(connected, inRoom);
   }
 
   function join(roomId) {
     if (!roomId || !socket) return;
     currentRoom = roomId.trim();
     socket.emit('join', { roomId: currentRoom, userId });
-    setStatus(`Connected • ${currentRoom}`);
+    setStatus(`Connected • ${currentRoom}`, true, true);
     
     // Save to recent rooms
     saveRecentRoom(currentRoom);
@@ -64,6 +119,8 @@
     els.homeView.hidden = false;
     els.chatView.hidden = true;
     currentRoom = '';
+    isInRoom = false;
+    updateConnectionStatus(isConnected, false);
     loadPublicRooms();
   }
 
@@ -337,26 +394,56 @@
     }
   });
 
-  els.codeInput.addEventListener('input', adjustTextareaHeight);
-
-  // Share button
-  els.shareBtn.addEventListener('click', async () => {
-    const rid = els.roomId.value?.trim();
-    if (!rid) return;
-    const url = new URL(location.href);
-    url.searchParams.set('room', rid);
-    await navigator.clipboard.writeText(url.toString());
-    els.shareBtn.textContent = '✓';
-    setTimeout(() => (els.shareBtn.textContent = '📤'), 1000);
+  els.codeInput.addEventListener('input', (e) => {
+    adjustTextareaHeight();
+    updateButtonStates(); // Update send button state based on input
   });
 
-  // AI button
+  // Share button - Updated for better functionality
+  els.shareBtn.addEventListener('click', async () => {
+    if (!isInRoom) return;
+    
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', currentRoom);
+    
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      
+      // Visual feedback
+      const originalHTML = els.shareBtn.innerHTML;
+      els.shareBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+      els.shareBtn.style.color = 'var(--success)';
+      
+      setTimeout(() => {
+        els.shareBtn.innerHTML = originalHTML;
+        els.shareBtn.style.color = '';
+      }, 2000);
+      
+      // Show temporary notification
+      showNotification('Room link copied to clipboard!', 'success');
+    } catch (err) {
+      showNotification('Failed to copy link', 'error');
+    }
+  });
+
+  // AI button - Enhanced with better UX
   els.aiBtn.addEventListener('click', async () => {
+    if (!isInRoom) {
+      showNotification('Join a room to use AI features', 'warning');
+      return;
+    }
+    
     const code = els.codeInput.value.trim();
-    if (!code) return;
+    if (!code) {
+      showNotification('Enter some code to get AI help', 'warning');
+      return;
+    }
     
     els.aiOut.hidden = false;
-    els.aiOut.textContent = 'AI is thinking...';
+    els.aiOut.textContent = '🤖 AI is analyzing your code...';
+    
+    // Disable button during request
+    els.aiBtn.disabled = true;
     
     try {
       const resp = await fetch(`${BACKEND_URL}/api/ask-ai`, {
@@ -367,18 +454,72 @@
       const data = await resp.json();
       
       if (data && data.text) {
-        els.aiOut.textContent = data.text;
+        els.aiOut.textContent = `🤖 AI Analysis:\n\n${data.text}`;
       } else {
-        els.aiOut.textContent = 'AI not available.';
+        els.aiOut.textContent = '🤖 AI service is currently unavailable.';
       }
     } catch (e) {
-      els.aiOut.textContent = 'AI request failed.';
+      els.aiOut.textContent = '🤖 Failed to connect to AI service. Please try again.';
+      console.error('AI request failed:', e);
+    } finally {
+      els.aiBtn.disabled = false;
+      updateButtonStates();
     }
   });
 
-  // Socket events - Full real-time functionality
-  socket.on('connect', () => setStatus('Connected'));
-  socket.on('disconnect', () => setStatus('Disconnected'));
+  // Add notification function
+  function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--${type === 'error' ? 'danger' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'accent'});
+      color: white;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      z-index: 1000;
+      font-size: 14px;
+      max-width: 300px;
+      opacity: 0;
+      transform: translateX(100%);
+      transition: all 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Auto remove
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
+  }
+
+  // Socket events - Enhanced with proper state management
+  socket.on('connect', () => {
+    setStatus('Connected', true, isInRoom);
+    showNotification('Connected to server', 'success');
+  });
+  
+  socket.on('disconnect', () => {
+    setStatus('Disconnected', false, false);
+    showNotification('Disconnected from server', 'error');
+  });
   
   socket.on('message_received', (data) => {
     addMessage(data);
@@ -423,6 +564,10 @@
   if (!roomFromQuery) {
     showHomeView();
   }
+
+  // Initialize app status and button states
+  setStatus('Connecting...', false, false);
+  updateButtonStates();
 
   // Close the initializeApp function
   }
