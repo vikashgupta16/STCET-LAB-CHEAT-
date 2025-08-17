@@ -28,13 +28,21 @@
 <body>
   <div class="app">
     <!-- Header -->
-    <header class="chat-header">
-      <div class="room-info">
-        <input id="roomId" placeholder="Enter room name..." />
-        <button id="joinBtn">Join</button>
-        <button id="recentBtn" class="recent-btn">📋</button>
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <h1>STCET Code Share</h1>
+          <div class="status" id="status">●</div>
+        </div>
+        
+        <div class="room-controls">
+          <div class="room-input-group">
+            <input id="roomId" placeholder="Enter room name..." />
+            <button id="joinBtn" class="primary-btn">Join</button>
+          </div>
+          <button id="recentBtn" class="icon-btn">📋</button>
+        </div>
       </div>
-      <div class="status" id="status">Disconnected</div>
       
       <!-- Recent Rooms Dropdown -->
       <div class="recent-rooms" id="recentRooms" hidden>
@@ -49,44 +57,48 @@
     <main class="chat-container">
       <!-- Home/Discovery View -->
       <div class="home-view" id="homeView">
-        <div class="hero">
-          <h2>🚀 STCET Code Share</h2>
-          <p>Discover active rooms or create your own</p>
+        <div class="hero-section">
+          <div class="hero-icon">🚀</div>
+          <h2>Discover Active Rooms</h2>
+          <p>Join existing rooms or create your own space</p>
         </div>
         
-        <div class="room-discovery">
+        <div class="rooms-section">
           <div class="section-header">
-            <h3>🔥 Active Rooms</h3>
-            <button id="refreshRooms" class="refresh-btn">↻</button>
+            <h3>Active Rooms</h3>
+            <button id="refreshRooms" class="icon-btn">↻</button>
           </div>
           <div class="rooms-grid" id="roomsGrid">
             <div class="loading">Loading rooms...</div>
           </div>
-          
-          <div class="create-room">
-            <h3>✨ Create New Room</h3>
-            <div class="create-input">
-              <input id="newRoomName" placeholder="Enter room name..." />
-              <button id="createRoomBtn">Create & Join</button>
-            </div>
+        </div>
+        
+        <div class="create-section">
+          <h3>Create New Room</h3>
+          <div class="create-form">
+            <input id="newRoomName" placeholder="Room name..." />
+            <button id="createRoomBtn" class="primary-btn">Create</button>
           </div>
         </div>
       </div>
       
       <!-- Chat View -->
       <div class="chat-view" id="chatView" hidden>
-        <div class="chat-header-bar">
-          <button id="backBtn" class="back-btn">← Back</button>
-          <div class="room-name" id="currentRoomName"></div>
+        <div class="chat-header">
+          <button id="backBtn" class="back-btn">←</button>
+          <div class="room-info">
+            <div class="room-name" id="currentRoomName"></div>
+          </div>
           <div class="room-actions">
-            <button id="roomShareBtn" class="share-room-btn">📤</button>
-            <button id="deleteRoomBtn" class="delete-room-btn">🗑️</button>
+            <button id="roomShareBtn" class="icon-btn">📤</button>
+            <button id="deleteRoomBtn" class="danger-btn">🗑️</button>
           </div>
         </div>
         
         <div class="messages" id="messages">
-          <div class="welcome-msg">
-            <p>🚀 Welcome to STCET Code Share</p>
+          <div class="welcome-message">
+            <div class="welcome-icon">�</div>
+            <h3>Welcome to STCET Code Share</h3>
             <p>Start sharing code in real-time</p>
           </div>
         </div>
@@ -94,17 +106,17 @@
     </main>
 
     <!-- Input Area -->
-    <footer class="input-area">
+    <footer class="input-section">
       <div class="input-container">
-        <textarea id="codeInput" placeholder="Type your code here..." rows="3"></textarea>
-        <div class="input-actions">
+        <textarea id="codeInput" placeholder="Type your code here..." rows="2"></textarea>
+        <div class="action-buttons">
           <button id="sendBtn" class="send-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
             </svg>
           </button>
-          <button id="shareBtn" class="action-btn">📤</button>
-          <button id="aiBtn" class="action-btn">🤖</button>
+          <!--<button id="shareBtn" class="secondary-btn">📤</button>-->
+          <!-- <button id="aiBtn" class="secondary-btn">🤖</button> -->
         </div>
       </div>
       <div class="ai-response" id="aiOut" hidden></div>
